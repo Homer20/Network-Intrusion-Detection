@@ -1,63 +1,40 @@
-# Importing libraries
-
-import os
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import time
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 
-with open("datasets/kddcup.names", 'r') as f:
-    print(f.read())
+# Load the data
+column_names = [line.split(':')[0] for line in open('datasets/kddcup.names').read().strip().split('\n')[1:]]
+column_names.append('target')
+data = pd.read_csv('datasets/kddcup.data_10_percent.gz', names=column_names)
 
-cols="""duration,
-protocol_type,
-service,
-flag,
-src_bytes
-dst_bytes,
-land,
-wrong_fragment,
-urgent,
-hot,
-num_failed_logins,
-logged_in,
-num_compromised,
-root_shell,
-su_attempted,
-num_root,
-num_file_creations,
-num_shells,
-num_access_files,
-num_outbound_cmds,
-is_host_login,
-is_guest_login,
-count,
-srv_count,
-serror_rate,
-srv_serror_rate,
-rerror_rate,
-srv_rerror_rate,
-same_srv_rate,
-diff_srv_rate,
-srv_diff_host_rate, 
-dst_host_count, 
-dst_host_srv_count, 
-dst_host_same_srv_rate, 
-dst_host_diff_srv_rate, 
-dst_host_same_src_port_rate, 
-dst_host_srv_diff_host_rate, 
-dst_host_serror_rate, 
-dst_host_srv_serror_rate, 
-dst_host_rerror_rate, 
-dst_host_srv_rerror_rate"""
+# Encode categorical features
+categorical_columns = data.select_dtypes(include=['object']).columns
+for column in categorical_columns:
+    data[column] = LabelEncoder().fit_transform(data[column])
 
-columns = []
-for c in cols.split(', '):
-    if(c.strip()):
-        columns.append(c.strip())
+# Split the data into features and target
+X = data.drop('target', axis=1)
+y = data['target']
 
-columns.append('target')
-print(len(columns))
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-with open("datasets/training_attack_types.txt", 'r') as f:
-    print(f.read())
+# Normalize the data
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Train the model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy:.2f}')
+print('Classification Report:')
+print(classification_report(y_test, y_pred))
